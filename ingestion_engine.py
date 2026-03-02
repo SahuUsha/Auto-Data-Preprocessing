@@ -162,6 +162,8 @@ from pathlib import Path
 MAX_FILE_SIZE_MB = 500
 
 
+
+
 # ----------------------------
 # Utility Logger
 # ----------------------------
@@ -288,7 +290,7 @@ def basic_cleaning(df: pd.DataFrame):
     # -------------------------
     # 🔎 NULL ANALYSIS
     # -------------------------
-    print("\n📊 NULL VALUE ANALYSIS")
+    print("\n NULL VALUE ANALYSIS")
     null_counts = df.isnull().sum()
     null_percent = (df.isnull().mean() * 100).round(2)
 
@@ -298,7 +300,7 @@ def basic_cleaning(df: pd.DataFrame):
     # -------------------------
     # 🔎 DUPLICATE ANALYSIS
     # -------------------------
-    print("\n📊 DUPLICATE ANALYSIS")
+    print("\n DUPLICATE ANALYSIS")
 
     total_duplicates = df.duplicated().sum()
     print(f"Total duplicate rows: {total_duplicates}")
@@ -335,6 +337,51 @@ def basic_cleaning(df: pd.DataFrame):
     return df.reset_index(drop=True)
 
 # ----------------------------
+# Profiling
+# ----------------------------
+
+def generate_profiling(df: pd.DataFrame):
+
+    print("\nGenerating column profiling...")
+
+    profile = {}
+
+    for col in df.columns:
+        profile[col] = {
+            "dtype": str(df[col].dtype),
+            "unique_values": int(df[col].nunique()),
+            "top_values": df[col].value_counts().head(3).to_dict()
+        }
+
+    return profile
+
+
+# ----------------------------
+# Insights Generator
+# ----------------------------
+
+def generate_insights(df: pd.DataFrame):
+
+    print("\nGenerating automatic insights...")
+
+    insights = []
+
+    for col in df.columns:
+
+        unique_ratio = df[col].nunique() / len(df)
+
+        if unique_ratio > 0.9:
+            insights.append(f"{col} appears to be a high-cardinality column (likely ID)")
+
+        null_percent = (df[col] == "Unknown").mean() * 100
+
+        if null_percent > 40:
+            insights.append(f"{col} contains {round(null_percent,2)}% missing values")
+
+    return insights
+
+
+# ----------------------------
 # Main Ingestion Pipeline
 # ----------------------------
 
@@ -342,51 +389,51 @@ def ingest_file(file_path: str):
 
     total_start = time.time()
 
-    log_step("STARTING INGESTION")
-
-    print(f"File path: {file_path}")
-
+    log_step("STEP 1: FILE VALIDATION")
     validate_file_size(file_path)
 
-    # Detect type
+    log_step("STEP 2: FILE TYPE DETECTION")
     file_type = detect_file_type(file_path)
 
     if file_type == "unknown":
         raise ValueError("Unsupported file format")
 
-    # Read file
-    log_step("READING FILE")
+    log_step("STEP 3: FILE READING")
     read_start = time.time()
     df = read_file(file_path, file_type)
-    print(f"Read completed in {round(time.time() - read_start, 4)} sec")
+    print("Read time:", round(time.time() - read_start, 4), "seconds")
+    print("Initial shape:", df.shape)
 
-    print(f"Initial shape: {df.shape}")
-    print(f"Memory usage: {round(df.memory_usage(deep=True).sum() / 1024, 2)} KB")
-
-    # Header
-    log_step("HEADER DETECTION")
-    header_start = time.time()
+    log_step("STEP 4: HEADER DETECTION")
     df = detect_header(df)
-    print(f"Header processing time: {round(time.time() - header_start, 4)} sec")
+    print("Shape after header fix:", df.shape)
 
-    # Cleaning
-    log_step("DATA CLEANING")
-    clean_start = time.time()
+    log_step("STEP 5: DATA CLEANING + QUALITY CHECK")
     df = basic_cleaning(df)
-    print(f"Cleaning time: {round(time.time() - clean_start, 4)} sec")
+    print("Shape after cleaning:", df.shape)
 
     if df.empty:
         raise ValueError("No valid data rows after preprocessing")
 
-    log_step("INGESTION COMPLETE")
+    log_step("STEP 6: PROFILING")
+    profiling = generate_profiling(df)
 
-    print(f"Final shape: {df.shape}")
-    print(f"Total time: {round(time.time() - total_start, 4)} sec")
+    log_step("STEP 7: AUTO INSIGHTS")
+    insights = generate_insights(df)
+
+    print("\nTotal pipeline time:",
+          round(time.time() - total_start, 4), "seconds")
+
+    # ----------------------------
+    # FINAL STRUCTURED RESPONSE
+    # ----------------------------
 
     return {
         "file_name": os.path.basename(file_path),
-        "columns": list(df.columns),
         "row_count": len(df),
         "column_count": len(df.columns),
+        "columns": list(df.columns),
+        "profiling": profiling,
+        "insights": insights,
         "preview": df.head(5).to_dict(orient="records")
     }

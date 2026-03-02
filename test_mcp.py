@@ -27,7 +27,7 @@ async def test():
             print("\n🚀 Calling ingest tool...")
             response = await session.call_tool(
                 "ingest",
-                {"path": "sandbox/ecommerce-order.json"}
+                {"path": "sandbox/customers-100.csv"}
             )
             
             print("\n📊 CLEAN OUTPUT:\n")

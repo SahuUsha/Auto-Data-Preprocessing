@@ -2,29 +2,32 @@ from mcp.server.fastmcp import FastMCP
 from ingestion_engine import ingest_file
 import os
 import json
+import io
+import sys
 
 mcp = FastMCP("AI Analytics Phase 1")
 
 
+
 @mcp.tool()
 def ingest(path: str) -> dict:
-    """
-    Ingest a CSV, Excel, or JSON file.
-    Performs normalization and profiling.
-    """
+    # Capture print output
+    buffer = io.StringIO()
+    sys_stdout = sys.stdout
+    sys.stdout = buffer
 
-    result = ingest_file(path)
+    try:
+        result = ingest_file(path)
+    finally:
+        sys.stdout = sys_stdout
 
-    # return {
-    #     "content": [
-    #         {
-    #             "type": "text",
-    #             "text": json.dumps(result, indent=2)
-    #         }
-    #     ]
-    # }
-    
-    return result
+    logs = buffer.getvalue()
+
+    # Include logs in response
+    return {
+        "logs": logs,
+        "result": result
+    }
 
 
 @mcp.resource("sandbox://files")
