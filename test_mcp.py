@@ -27,8 +27,10 @@ async def test():
             print("\n🚀 Calling ingest tool...")
             response = await session.call_tool(
                 "ingest",
-                {"path": "sandbox/customers-100.csv"}
+                {"path": "sandbox/people-100000.csv"}
             )
+            
+            
             
             print("\n📊 CLEAN OUTPUT:\n")
 

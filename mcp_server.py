@@ -4,6 +4,8 @@ import os
 import json
 import io
 import sys
+import time
+
 
 mcp = FastMCP("AI Analytics Phase 1")
 
@@ -21,10 +23,11 @@ def ingest(path: str) -> dict:
     finally:
         sys.stdout = sys_stdout
 
-    logs = buffer.getvalue()
+    logs = buffer.getvalue().strip().split("\n")
 
     # Include logs in response
     return {
+        "status": "success",
         "logs": logs,
         "result": result
     }
